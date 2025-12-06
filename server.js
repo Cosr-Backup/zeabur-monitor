@@ -760,8 +760,8 @@ app.get('/api/latest-version', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✨ Zeabur Monitor 运行在 http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✨ Zeabur Monitor 运行在 http://0.0.0.0:${PORT}`);
   
   const envAccounts = getEnvAccounts();
   const serverAccounts = loadServerAccounts();
