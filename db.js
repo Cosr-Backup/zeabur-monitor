@@ -45,20 +45,31 @@ async function initDatabase() {
       ssl: process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false }
     });
 
+    // 获取 schema 配置，默认为 public
+    const schema = process.env.DATABASE_SCHEMA || 'public';
+
     // 使用单个客户端连接来初始化，确保 search_path 设置生效
     const client = await pool.connect();
     try {
-      // 测试连接并设置 search_path
-      await client.query('SET search_path TO public');
+      // 创建 schema（如果不存在）
+      await client.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+
+      // 设置 search_path
+      await client.query(`SET search_path TO ${schema}`);
       await client.query('SELECT 1');
 
       // 创建表（在同一个连接上）
       await createTablesWithClient(client);
 
-      console.log('✅ 数据库表已就绪');
+      console.log(`✅ 数据库表已就绪 (schema: ${schema})`);
     } finally {
       client.release();
     }
+
+    // 为连接池设置默认 search_path
+    pool.on('connect', (client) => {
+      client.query(`SET search_path TO ${schema}`);
+    });
 
     isDbEnabled = true;
     console.log('🐘 存储模式: PostgreSQL');
