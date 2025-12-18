@@ -4,44 +4,28 @@
  */
 
 const crypto = require('crypto');
+const { getRedisClient, isRedisAvailable, initRedisClient } = require('./redis-client');
 
 // Session 配置
 const SESSION_DURATION = 10 * 24 * 60 * 60 * 1000; // 10天
 const SESSION_PREFIX = 'session:';
 
-// 存储后端
-let redisClient = null;
-let isRedisEnabled = false;
+// 内存存储后端（备用）
 const memorySessions = new Map();
 
 /**
  * 初始化 Session 存储
  */
 async function initSessionStore() {
-  const redisUrl = process.env.REDIS_URL;
+  const connected = await initRedisClient();
 
-  if (!redisUrl) {
+  if (!connected) {
     console.log('📝 Session 存储: 内存');
     return false;
   }
 
-  try {
-    const Redis = require('ioredis');
-    redisClient = new Redis(redisUrl, {
-      maxRetriesPerRequest: 3,
-      retryDelayOnFailover: 100
-    });
-
-    await redisClient.ping();
-    isRedisEnabled = true;
-    console.log('🔴 Session 存储: Redis');
-    return true;
-  } catch (error) {
-    console.error('❌ Redis 连接失败:', error.message);
-    console.log('📝 回退到内存存储');
-    redisClient = null;
-    return false;
-  }
+  console.log('🔴 Session 存储: Redis');
+  return true;
 }
 
 /**
@@ -64,8 +48,9 @@ async function createSession(userId = 'admin') {
     expiresAt: Date.now() + SESSION_DURATION
   };
 
-  if (isRedisEnabled && redisClient) {
-    await redisClient.setex(
+  const client = getRedisClient();
+  if (isRedisAvailable() && client) {
+    await client.setex(
       SESSION_PREFIX + token,
       Math.floor(SESSION_DURATION / 1000),
       JSON.stringify(session)
@@ -87,8 +72,9 @@ async function validateSession(token) {
 
   let session = null;
 
-  if (isRedisEnabled && redisClient) {
-    const data = await redisClient.get(SESSION_PREFIX + token);
+  const client = getRedisClient();
+  if (isRedisAvailable() && client) {
+    const data = await client.get(SESSION_PREFIX + token);
     if (data) {
       session = JSON.parse(data);
     }
@@ -112,8 +98,9 @@ async function validateSession(token) {
  * @param {string} token - Session Token
  */
 async function destroySession(token) {
-  if (isRedisEnabled && redisClient) {
-    await redisClient.del(SESSION_PREFIX + token);
+  const client = getRedisClient();
+  if (isRedisAvailable() && client) {
+    await client.del(SESSION_PREFIX + token);
   } else {
     memorySessions.delete(token);
   }
@@ -123,7 +110,7 @@ async function destroySession(token) {
  * 清理过期 Session（仅内存模式）
  */
 function cleanExpiredSessions() {
-  if (isRedisEnabled) return; // Redis 自动过期
+  if (isRedisAvailable()) return; // Redis 自动过期
 
   const now = Date.now();
   for (const [token, session] of memorySessions.entries()) {
@@ -137,29 +124,19 @@ function cleanExpiredSessions() {
  * 获取活跃 Session 数量
  */
 async function getActiveSessionCount() {
-  if (isRedisEnabled && redisClient) {
-    const keys = await redisClient.keys(SESSION_PREFIX + '*');
+  const client = getRedisClient();
+  if (isRedisAvailable() && client) {
+    const keys = await client.keys(SESSION_PREFIX + '*');
     return keys.length;
   }
   return memorySessions.size;
 }
 
 /**
- * 关闭 Redis 连接
- */
-async function closeSessionStore() {
-  if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    isRedisEnabled = false;
-  }
-}
-
-/**
  * 检查是否使用 Redis
  */
 function isRedisSessionEnabled() {
-  return isRedisEnabled;
+  return isRedisAvailable();
 }
 
 // 每小时清理过期 Session（内存模式）
@@ -173,6 +150,5 @@ module.exports = {
   destroySession,
   cleanExpiredSessions,
   getActiveSessionCount,
-  closeSessionStore,
   isRedisSessionEnabled
 };

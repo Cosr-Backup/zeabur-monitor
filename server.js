@@ -8,6 +8,8 @@ const { initSessionStore, createSession, validateSession, destroySession, isRedi
 const { apiLimiter, loginLimiter, passwordSetLimiter, validatePassword, validateAccounts, validateIndex, validateRename, validateServiceAction, validateLogsQuery, validateWebhook } = require('./middleware');
 const { setWebhookConfigs, sendWebhook, testWebhook, EVENTS } = require('./notifications');
 const db = require('./db');
+const cache = require('./cache');
+const { getRedisInfo, closeRedisClient } = require('./redis-client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -625,13 +627,36 @@ app.get('/api/latest-version', async (req, res) => {
 
 app.get('/api/status', requireAuth, async (req, res) => {
   const { getActiveSessionCount } = require('./session-store');
+  const redisInfo = getRedisInfo();
+  const cacheStats = await cache.getStats();
+
   res.json({
     database: db.isDatabaseEnabled() ? 'PostgreSQL' : 'File',
     session: isRedisSessionEnabled() ? 'Redis' : 'Memory',
+    cache: {
+      backend: cacheStats.backend,
+      redisKeys: cacheStats.redisKeys || 0,
+      memoryKeys: cacheStats.memorySize
+    },
+    redis: {
+      enabled: redisInfo.enabled,
+      tls: redisInfo.tls
+    },
     encryption: ENCRYPTION_ENABLED,
     activeSessions: await getActiveSessionCount(),
     quotaWarningThreshold: QUOTA_WARNING_THRESHOLD
   });
+});
+
+// 缓存管理 API
+app.delete('/api/cache', requireAuth, async (req, res) => {
+  await cache.flush();
+  res.json({ success: true, message: '缓存已清空' });
+});
+
+app.get('/api/cache/stats', requireAuth, async (req, res) => {
+  const stats = await cache.getStats();
+  res.json(stats);
 });
 
 // ==================== 启动服务器 ====================
@@ -645,9 +670,15 @@ async function startServer() {
   setWebhookConfigs(webhooks);
 
   app.listen(PORT, '0.0.0.0', async () => {
+    const redisInfo = getRedisInfo();
     console.log(`✨ Zeabur Monitor v2.0 运行在 http://0.0.0.0:${PORT}`);
     console.log(`📁 数据存储: ${db.isDatabaseEnabled() ? 'PostgreSQL' : '文件系统'}`);
     console.log(`📝 Session: ${isRedisSessionEnabled() ? 'Redis' : '内存'}`);
+    if (redisInfo.enabled) {
+      console.log(`🗄️ 缓存: Redis${redisInfo.tls ? ' (TLS)' : ''}`);
+    } else {
+      console.log(`🗄️ 缓存: 内存`);
+    }
     console.log(`🔐 Token 加密: ${ENCRYPTION_ENABLED ? '已启用' : '未启用'}`);
     console.log(`🔔 Webhook: ${webhooks.length} 个配置`);
 
