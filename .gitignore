@@ -13,7 +13,9 @@ password.json
 # 数据目录
 data/
 
-# 测试覆盖率
+# 测试相关
+__tests__/
+jest.config.js
 coverage/
 
 # 日志
