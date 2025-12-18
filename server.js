@@ -14,6 +14,9 @@ const { getRedisInfo, closeRedisClient } = require('./redis-client');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 信任代理（用于正确获取客户端 IP，支持 Zeabur/Docker/Nginx 等反向代理）
+app.set('trust proxy', 1);
+
 // 加密密钥
 const ACCOUNTS_SECRET = process.env.ACCOUNTS_SECRET;
 const ENCRYPTION_ENABLED = ACCOUNTS_SECRET && ACCOUNTS_SECRET.length === 64;
