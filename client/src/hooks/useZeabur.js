@@ -73,19 +73,20 @@ export function useDashboardData(accounts) {
     queryKey: ['dashboard', accounts], // Depend on accounts list
     queryFn: async () => {
       if (!accounts || accounts.length === 0) return []
-      
+
       // Strip extra data for the request
       const accountsPayload = accounts.map(a => ({ name: a.name, token: a.token }))
-      
+
       // Parallel fetch like in old frontend
       const [accountsRes, projectsRes] = await Promise.all([
         api.post('/temp-accounts', { accounts: accountsPayload }),
         api.post('/temp-projects', { accounts: accountsPayload, projectCosts: {} })
       ])
-      
-      // Merge data
+
+      // Merge data - 保留原始 token 用于后续 API 调用
       return accountsRes.data.map((acc, index) => ({
         ...acc,
+        token: accounts[index]?.token, // 保留原始 token
         projects: projectsRes.data[index]?.projects || []
       }))
     },
