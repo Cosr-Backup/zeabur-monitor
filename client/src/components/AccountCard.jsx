@@ -65,12 +65,19 @@ const ServiceItem = ({ service, account, project, onLogs }) => {
         >
           {service.status === 'SUSPENDED' ? <Play className="h-3 w-3" /> : <RotateCw className="h-3 w-3" />}
         </Button>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="h-6 w-6" 
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-6 w-6"
           title="日志"
-          onClick={() => onLogs(service)}
+          onClick={() => onLogs({
+            name: service.name,
+            token: account.token,
+            serviceId: service._id,
+            environmentId: project.environments?.[0]?._id,
+            projectId: project._id,
+            projectName: project.name
+          })}
         >
           <FileText className="h-3 w-3" />
         </Button>

@@ -15,7 +15,12 @@ export function LogsDialog({ open, onOpenChange, serviceInfo }) {
     if (open && serviceInfo) {
       setLogs([])
       setError(null)
-      fetchLogs(serviceInfo, {
+      fetchLogs({
+        token: serviceInfo.token,
+        serviceId: serviceInfo.serviceId,
+        environmentId: serviceInfo.environmentId,
+        projectId: serviceInfo.projectId
+      }, {
         onSuccess: (data) => {
           if (data.logs) {
             setLogs(data.logs)

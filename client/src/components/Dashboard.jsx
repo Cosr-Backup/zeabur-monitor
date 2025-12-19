@@ -24,8 +24,8 @@ function Dashboard() {
   const { data: version } = useVersion()
   const { mutate: deleteAccount } = useDeleteAccount()
 
-  const handleLogs = (service, project, account) => {
-    setSelectedService({ ...service, projectName: project.name, accountToken: account.token })
+  const handleLogs = (serviceInfo) => {
+    setSelectedService(serviceInfo)
     setLogsOpen(true)
   }
 
@@ -114,10 +114,10 @@ function Dashboard() {
         ) : (
           <div>
             {dashboardData?.map((account) => (
-              <AccountCard 
-                key={account.name} 
-                account={account} 
-                onLogs={(service) => handleLogs(service, {name: 'Project'}, account)} // Project name passed down is cleaner but this works
+              <AccountCard
+                key={account.name}
+                account={account}
+                onLogs={handleLogs}
               />
             ))}
             
