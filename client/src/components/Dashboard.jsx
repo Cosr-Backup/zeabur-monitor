@@ -51,7 +51,7 @@ function Dashboard() {
             Zeabur Monitor
           </div>
           <div className="flex flex-1 items-center justify-end space-x-2">
-            <Button variant="ghost" size="sm" onClick={() => window.open('https://github.com/jiujiu532/zeabur-monitor', '_blank')}>
+            <Button variant="ghost" size="sm" onClick={() => window.open('https://github.com/Silentely/zeabur-monitor', '_blank')}>
               <Github className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">GitHub</span>
             </Button>

@@ -609,7 +609,7 @@ app.get('/api/latest-version', async (req, res) => {
   try {
     const options = {
       hostname: 'raw.githubusercontent.com',
-      path: '/jiujiu532/zeabur-monitor/main/package.json',
+      path: '/Silentely/zeabur-monitor/main/package.json',
       method: 'GET', timeout: 5000
     };
 
